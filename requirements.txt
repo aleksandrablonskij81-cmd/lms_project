@@ -1,0 +1,5 @@
+Django>=6.1
+djangorestframework
+psycopg2-binary
+pillow
+python-dotenv
