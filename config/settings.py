@@ -2,14 +2,18 @@
 Django settings for config project.
 """
 
+import os
 from pathlib import Path
+from dotenv import load_dotenv
+
+load_dotenv()
 
 BASE_DIR = Path(__file__).resolve().parent.parent
 
 
 # ===== БЕЗОПАСНОСТЬ =====
-SECRET_KEY = 'django-insecure-lms-project-secret-key-change-me-in-production'
-DEBUG = True
+SECRET_KEY = os.getenv('SECRET_KEY', 'django-insecure-fallback-key-change-me')
+DEBUG = os.getenv('DEBUG', 'True') == 'True'
 ALLOWED_HOSTS = ['127.0.0.1', 'localhost']
 
 
@@ -22,6 +26,7 @@ INSTALLED_APPS = [
     'django.contrib.messages',
     'django.contrib.staticfiles',
     'rest_framework',
+    'django_filters',
     'users',
     'lms',
 ]
@@ -64,11 +69,11 @@ WSGI_APPLICATION = 'config.wsgi.application'
 DATABASES = {
     'default': {
         'ENGINE': 'django.db.backends.postgresql',
-        'NAME': 'lms_db',
-        'USER': 'aleksandr',
-        'PASSWORD': '',
-        'HOST': 'localhost',
-        'PORT': '5432',
+        'NAME': os.getenv('DB_NAME', 'lms_db'),
+        'USER': os.getenv('DB_USER', 'aleksandr'),
+        'PASSWORD': os.getenv('DB_PASSWORD', ''),
+        'HOST': os.getenv('DB_HOST', 'localhost'),
+        'PORT': os.getenv('DB_PORT', '5432'),
     }
 }
 
@@ -106,6 +111,12 @@ AUTH_USER_MODEL = 'users.CustomUser'
 # ===== DRF =====
 REST_FRAMEWORK = {
     'DEFAULT_PERMISSION_CLASSES': [
-        'rest_framework.permissions.AllowAny',
+        'rest_framework.permissions.IsAuthenticated',
+    ],
+    'DEFAULT_PAGINATION_CLASS': 'rest_framework.pagination.PageNumberPagination',
+    'PAGE_SIZE': 10,
+    'DEFAULT_FILTER_BACKENDS': [
+        'django_filters.rest_framework.DjangoFilterBackend',
+        'rest_framework.filters.OrderingFilter',
     ],
 }
