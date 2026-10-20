@@ -19,3 +19,34 @@ class PaymentViewSet(viewsets.ModelViewSet):
     filterset_class = PaymentFilter
     ordering_fields = ['payment_date']
     ordering = ['-payment_date']
+from rest_framework import viewsets, status
+from rest_framework.permissions import AllowAny, IsAuthenticated
+from rest_framework.response import Response
+from users.models import CustomUser
+from users.serializers import UserSerializer, RegisterSerializer
+
+
+class UserViewSet(viewsets.ModelViewSet):
+    queryset = CustomUser.objects.all()
+    serializer_class = UserSerializer
+    permission_classes = [IsAuthenticated]
+
+    def get_permissions(self):
+        # Регистрация доступна всем
+        if self.action == 'create':
+            return [AllowAny()]
+        return super().get_permissions()
+
+    def get_serializer_class(self):
+        if self.action == 'create':
+            return RegisterSerializer
+        return UserSerializer
+
+    def create(self, request, *args, **kwargs):
+        serializer = self.get_serializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        user = serializer.save()
+        return Response(
+            UserSerializer(user).data,
+            status=status.HTTP_201_CREATED
+        )
