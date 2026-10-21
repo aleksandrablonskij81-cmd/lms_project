@@ -1,21 +1,30 @@
-from rest_framework import permissions
+from rest_framework.permissions import BasePermission
 
 
-class IsOwnerOrModerator(permissions.BasePermission):
-    def has_permission(self, request, view):
-        print(f"🔍 has_permission: user={request.user.email}, action={view.action}, method={request.method}")
-        if not request.user.is_authenticated:
-            return request.method in permissions.SAFE_METHODS
-        if request.user.groups.filter(name='Модератор').exists():
-            if view.action in ['create', 'destroy']:
-                return False
-            return True
-        return True
+def is_moderator(user) -> bool:
+    return user.is_authenticated and user.groups.filter(name="Модератор").exists()
 
-    def has_object_permission(self, request, view, obj):
-        print(f"🔍 has_object_permission: user={request.user.email}, obj.owner={getattr(obj, 'owner', None)}, method={request.method}")
-        if request.user.groups.filter(name='Модератор').exists():
-            return True
-        if hasattr(obj, 'owner') and obj.owner == request.user:
-            return True
-        return request.method in permissions.SAFE_METHODS
+
+class IsNotModerator(BasePermission):
+    """Обычный пользователь, но не модератор."""
+
+    def has_permission(self, request, view) -> bool:
+        return request.user.is_authenticated and not is_moderator(request.user)
+
+
+class IsOwnerOrModerator(BasePermission):
+    def has_permission(self, request, view) -> bool:
+        return request.user.is_authenticated
+
+    def has_object_permission(self, request, view, obj) -> bool:
+        return obj.owner_id == request.user.id or is_moderator(request.user)
+
+
+class IsOwnerAndNotModerator(BasePermission):
+    """Удалять объект может только его владелец, но не модератор."""
+
+    def has_permission(self, request, view) -> bool:
+        return request.user.is_authenticated and not is_moderator(request.user)
+
+    def has_object_permission(self, request, view, obj) -> bool:
+        return obj.owner_id == request.user.id

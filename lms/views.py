@@ -1,66 +1,57 @@
 from rest_framework import viewsets
 from rest_framework.filters import OrderingFilter
-from rest_framework.exceptions import PermissionDenied
+from rest_framework.permissions import IsAuthenticated
 from django_filters.rest_framework import DjangoFilterBackend
 
 from .models import Course, Lesson
 from .serializers import CourseSerializer, LessonSerializer
-from .permissions import IsOwnerOrModerator
+from .permissions import (
+    IsNotModerator,
+    IsOwnerAndNotModerator,
+    IsOwnerOrModerator,
+    is_moderator,
+)
 
 
-class CourseViewSet(viewsets.ModelViewSet):
-    """ViewSet для курсов"""
+class OwnedModelViewSetMixin:
+    """Миксин: фильтрация по owner и права по action."""
+
+    def get_queryset(self):
+        queryset = super().get_queryset()
+        if is_moderator(self.request.user):
+            return queryset
+        return queryset.filter(owner=self.request.user)
+
+    def get_permissions(self):
+        permissions_by_action = {
+            "create": [IsAuthenticated, IsNotModerator],
+            "list": [IsAuthenticated],
+            "retrieve": [IsAuthenticated, IsOwnerOrModerator],
+            "update": [IsAuthenticated, IsOwnerOrModerator],
+            "partial_update": [IsAuthenticated, IsOwnerOrModerator],
+            "destroy": [IsAuthenticated, IsOwnerAndNotModerator],
+        }
+        permission_classes = permissions_by_action.get(
+            self.action,
+            [IsAuthenticated],
+        )
+        return [permission() for permission in permission_classes]
+
+    def perform_create(self, serializer):
+        serializer.save(owner=self.request.user)
+
+
+class CourseViewSet(OwnedModelViewSetMixin, viewsets.ModelViewSet):
     queryset = Course.objects.all()
     serializer_class = CourseSerializer
-    permission_classes = [IsOwnerOrModerator]
     filter_backends = [DjangoFilterBackend, OrderingFilter]
     ordering_fields = ['title']
     ordering = ['title']
 
-    def perform_create(self, serializer):
-        """Автоматически назначаем владельца"""
-        serializer.save(owner=self.request.user)
 
-    def perform_update(self, serializer):
-        """Проверка: только владелец или модератор"""
-        obj = self.get_object()
-        print(f"🔍 perform_update: obj.owner={obj.owner}, request.user={self.request.user}")
-        if obj.owner != self.request.user and not self.request.user.groups.filter(name='Модератор').exists():
-            raise PermissionDenied('Вы не можете редактировать чужой курс.')
-        serializer.save()
-
-    def perform_destroy(self, instance):
-        """Проверка: только владелец или модератор"""
-        print(f"🔍 perform_destroy: obj.owner={instance.owner}, request.user={self.request.user}")
-        if instance.owner != self.request.user and not self.request.user.groups.filter(name='Модератор').exists():
-            raise PermissionDenied('Вы не можете удалить чужой курс.')
-        instance.delete()
-
-
-class LessonViewSet(viewsets.ModelViewSet):
-    """ViewSet для уроков"""
+class LessonViewSet(OwnedModelViewSetMixin, viewsets.ModelViewSet):
     queryset = Lesson.objects.all()
     serializer_class = LessonSerializer
-    permission_classes = [IsOwnerOrModerator]
     filter_backends = [DjangoFilterBackend, OrderingFilter]
     ordering_fields = ['title']
     ordering = ['title']
-
-    def perform_create(self, serializer):
-        """Автоматически назначаем владельца"""
-        serializer.save(owner=self.request.user)
-
-    def perform_update(self, serializer):
-        """Проверка: только владелец или модератор"""
-        obj = self.get_object()
-        print(f"🔍 perform_update (lesson): obj.owner={obj.owner}, request.user={self.request.user}")
-        if obj.owner != self.request.user and not self.request.user.groups.filter(name='Модератор').exists():
-            raise PermissionDenied('Вы не можете редактировать чужой урок.')
-        serializer.save()
-
-    def perform_destroy(self, instance):
-        """Проверка: только владелец или модератор"""
-        print(f"🔍 perform_destroy (lesson): obj.owner={instance.owner}, request.user={self.request.user}")
-        if instance.owner != self.request.user and not self.request.user.groups.filter(name='Модератор').exists():
-            raise PermissionDenied('Вы не можете удалить чужой урок.')
-        instance.delete()
