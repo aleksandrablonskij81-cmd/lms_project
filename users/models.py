@@ -62,6 +62,16 @@ class Payment(models.Model):
         (PAYMENT_TRANSFER, 'Перевод на счёт'),
     ]
 
+    STATUS_PENDING = 'pending'
+    STATUS_PAID = 'paid'
+    STATUS_FAILED = 'failed'
+
+    STATUS_CHOICES = [
+        (STATUS_PENDING, 'Ожидает'),
+        (STATUS_PAID, 'Оплачен'),
+        (STATUS_FAILED, 'Ошибка'),
+    ]
+
     user = models.ForeignKey(
         CustomUser,
         on_delete=models.CASCADE,
@@ -98,6 +108,20 @@ class Payment(models.Model):
         choices=PAYMENT_CHOICES,
         default=PAYMENT_TRANSFER,
         verbose_name='Способ оплаты'
+    )
+
+    # Поля для Stripe
+    stripe_product_id = models.CharField(max_length=255, blank=True)
+    stripe_price_id = models.CharField(max_length=255, blank=True)
+    stripe_session_id = models.CharField(max_length=500, blank=True)  # 👈 увеличили
+    payment_url = models.URLField(max_length=500, blank=True)  # 👈 увеличили
+
+    # 👇 СТАТУС (его не хватало)
+    status = models.CharField(
+        max_length=20,
+        choices=STATUS_CHOICES,
+        default=STATUS_PENDING,
+        verbose_name='Статус оплаты'
     )
 
     class Meta:
