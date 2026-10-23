@@ -42,7 +42,8 @@ INSTALLED_APPS = [
     'rest_framework',
     'rest_framework_simplejwt',
     'django_filters',
-    'drf_spectacular',          # 👈 документация
+    'drf_spectacular',
+    'django_celery_beat',# 👈 документация
     'lms',
     'users',
 ]
@@ -176,3 +177,12 @@ STRIPE_SECRET_KEY = os.getenv('STRIPE_SECRET_KEY', 'sk_test_ваш_ключ')
 STRIPE_PUBLISHABLE_KEY = os.getenv('STRIPE_PUBLISHABLE_KEY', 'pk_test_ваш_ключ')
 STRIPE_SUCCESS_URL = 'http://127.0.0.1:8000/api/payments/success/'
 STRIPE_CANCEL_URL = 'http://127.0.0.1:8000/api/payments/cancel/'
+
+# ===== CELERY =====
+CELERY_BROKER_URL = os.getenv('CELERY_BROKER_URL', 'redis://127.0.0.1:6379/2')
+CELERY_RESULT_BACKEND = os.getenv('CELERY_RESULT_BACKEND', 'redis://127.0.0.1:6379/2')
+CELERY_ACCEPT_CONTENT = ['application/json']
+CELERY_TASK_SERIALIZER = 'json'
+CELERY_RESULT_SERIALIZER = 'json'
+CELERY_TIMEZONE = TIME_ZONE  # 👈 должно совпадать с TIME_ZONE Django
+CELERY_BEAT_SCHEDULER = 'django_celery_beat.schedulers:DatabaseScheduler'
