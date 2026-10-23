@@ -17,6 +17,7 @@ from .permissions import (
 )
 from .paginators import CoursePagination, LessonPagination
 from .services import create_checkout_session
+from .tasks import send_course_update_email
 from users.models import Payment
 
 
@@ -56,6 +57,12 @@ class CourseViewSet(OwnedModelViewSetMixin, viewsets.ModelViewSet):
     filter_backends = [DjangoFilterBackend, OrderingFilter]
     ordering_fields = ['title']
     ordering = ['title']
+
+    def perform_update(self, serializer):
+        """При обновлении курса — отправляем письма подписчикам"""
+        course = serializer.save()
+        # 👇 ПРОВЕРКА ОТКЛЮЧЕНА (для теста)
+        send_course_update_email.delay(course.id)
 
 
 class LessonViewSet(OwnedModelViewSetMixin, viewsets.ModelViewSet):
