@@ -1,9 +1,13 @@
 from rest_framework import viewsets
 from rest_framework.filters import OrderingFilter
 from rest_framework.permissions import IsAuthenticated
+from rest_framework.views import APIView
+from rest_framework.response import Response
+from django.shortcuts import get_object_or_404
+from django.conf import settings
 from django_filters.rest_framework import DjangoFilterBackend
 
-from .models import Course, Lesson
+from .models import Course, Lesson, Subscription
 from .serializers import CourseSerializer, LessonSerializer
 from .permissions import (
     IsNotModerator,
@@ -11,6 +15,9 @@ from .permissions import (
     IsOwnerOrModerator,
     is_moderator,
 )
+from .paginators import CoursePagination, LessonPagination
+from .services import create_checkout_session
+from users.models import Payment
 
 
 class OwnedModelViewSetMixin:
@@ -42,16 +49,77 @@ class OwnedModelViewSetMixin:
 
 
 class CourseViewSet(OwnedModelViewSetMixin, viewsets.ModelViewSet):
+    """ViewSet для курсов"""
     queryset = Course.objects.all()
     serializer_class = CourseSerializer
+    pagination_class = CoursePagination
     filter_backends = [DjangoFilterBackend, OrderingFilter]
     ordering_fields = ['title']
     ordering = ['title']
 
 
 class LessonViewSet(OwnedModelViewSetMixin, viewsets.ModelViewSet):
+    """ViewSet для уроков"""
     queryset = Lesson.objects.all()
     serializer_class = LessonSerializer
+    pagination_class = LessonPagination
     filter_backends = [DjangoFilterBackend, OrderingFilter]
     ordering_fields = ['title']
     ordering = ['title']
+
+
+class SubscriptionAPIView(APIView):
+    """Управление подпиской на курс (POST: toggle)"""
+    permission_classes = [IsAuthenticated]
+
+    def post(self, request, *args, **kwargs):
+        user = request.user
+        course_id = request.data.get('course_id')
+        course_item = get_object_or_404(Course, id=course_id)
+
+        subs_item = Subscription.objects.filter(user=user, course=course_item)
+
+        if subs_item.exists():
+            subs_item.delete()
+            message = 'Подписка удалена'
+        else:
+            Subscription.objects.create(user=user, course=course_item)
+            message = 'Подписка добавлена'
+
+        return Response({"message": message})
+
+
+class CreatePaymentView(APIView):
+    """Создание платежа через Stripe"""
+    permission_classes = [IsAuthenticated]
+
+    def post(self, request, *args, **kwargs):
+        course_id = request.data.get('course_id')
+        try:
+            course = Course.objects.get(id=course_id)
+        except Course.DoesNotExist:
+            return Response({'error': 'Курс не найден'}, status=404)
+
+        payment = Payment.objects.create(
+            user=request.user,
+            course=course,
+            amount=course.price,
+            payment_method='transfer',
+        )
+
+        try:
+            session = create_checkout_session(
+                course=course,
+                payment=payment,
+                success_url=settings.STRIPE_SUCCESS_URL,
+                cancel_url=settings.STRIPE_CANCEL_URL,
+            )
+            return Response({
+                'payment_url': session.url,
+                'session_id': session.id,
+                'payment_id': payment.id,
+            })
+        except Exception as e:
+            payment.status = 'failed'
+            payment.save(update_fields=['status'])
+            return Response({'error': str(e)}, status=400)
