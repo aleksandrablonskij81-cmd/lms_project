@@ -2,15 +2,20 @@
 Django settings for config project.
 """
 
+import os
 from pathlib import Path
+from dotenv import load_dotenv
+
+# Загружаем переменные окружения из .env
+load_dotenv()
 
 BASE_DIR = Path(__file__).resolve().parent.parent
 
 
 # ===== БЕЗОПАСНОСТЬ =====
-SECRET_KEY = 'django-insecure-lms-project-secret-key-change-me-in-production'
-DEBUG = True
-ALLOWED_HOSTS = ['127.0.0.1', 'localhost']
+SECRET_KEY = os.getenv('SECRET_KEY', 'django-insecure-fallback-key-change-me')
+DEBUG = os.getenv('DEBUG', 'True') == 'True'
+ALLOWED_HOSTS = ['127.0.0.1', 'localhost', 'web']
 
 
 # ===== ПРИЛОЖЕНИЯ =====
@@ -22,6 +27,7 @@ INSTALLED_APPS = [
     'django.contrib.messages',
     'django.contrib.staticfiles',
     'rest_framework',
+    'django_filters',
     'users',
     'lms',
 ]
@@ -60,15 +66,15 @@ TEMPLATES = [
 WSGI_APPLICATION = 'config.wsgi.application'
 
 
-# ===== БАЗА ДАННЫХ =====
+# ===== БАЗА ДАННЫХ (из .env) =====
 DATABASES = {
     'default': {
         'ENGINE': 'django.db.backends.postgresql',
-        'NAME': 'lms_db',
-        'USER': 'aleksandr',
-        'PASSWORD': '',
-        'HOST': 'localhost',
-        'PORT': '5432',
+        'NAME': os.getenv('DB_NAME', 'lms_db'),
+        'USER': os.getenv('DB_USER', 'aleksandr'),
+        'PASSWORD': os.getenv('DB_PASSWORD', ''),
+        'HOST': os.getenv('DB_HOST', 'localhost'),
+        'PORT': os.getenv('DB_PORT', '5432'),
     }
 }
 
@@ -108,4 +114,21 @@ REST_FRAMEWORK = {
     'DEFAULT_PERMISSION_CLASSES': [
         'rest_framework.permissions.AllowAny',
     ],
+    'DEFAULT_PAGINATION_CLASS': 'rest_framework.pagination.PageNumberPagination',
+    'PAGE_SIZE': 10,
+    'DEFAULT_FILTER_BACKENDS': [
+        'django_filters.rest_framework.DjangoFilterBackend',
+        'rest_framework.filters.OrderingFilter',
+    ],
 }
+
+
+# ===== REDIS / CELERY (если используешь) =====
+REDIS_URL = os.getenv('REDIS_URL', 'redis://localhost:6379/2')
+# ===== CELERY =====
+CELERY_BROKER_URL = os.getenv('CELERY_BROKER_URL', 'redis://redis:6379/2')
+CELERY_RESULT_BACKEND = os.getenv('CELERY_RESULT_BACKEND', 'redis://redis:6379/2')
+CELERY_ACCEPT_CONTENT = ['json']
+CELERY_TASK_SERIALIZER = 'json'
+CELERY_RESULT_SERIALIZER = 'json'
+CELERY_TIMEZONE = TIME_ZONE
