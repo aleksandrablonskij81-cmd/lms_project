@@ -1,11 +1,11 @@
-                  # LMS Project (Django REST Framework)
+# LMS Project (Django REST Framework)
 
 API для LMS-системы: пользователи, курсы, уроки, платежи.
 
 ## Технологии
 
-- Python 3.14
-- Django 6.0
+- Python 3.12
+- Django 6.1
 - Django REST Framework
 - PostgreSQL
 - Redis
@@ -13,11 +13,12 @@ API для LMS-системы: пользователи, курсы, уроки,
 - Pillow
 - python-dotenv
 - django-filter
+- Gunicorn + Nginx (для продакшена)
 
-## Установка (без Docker)
+## Установка (локально, без Docker)
 
 ### 1. Клонировать репозиторий
 
 ```bash
 git clone https://github.com/aleksandrablonskij81-cmd/lms_project.git
-cd lms_project                                                                                                                            (.venv) (base) aleksandr@MacBook-Pro-Aleksandr lms_project % 
+cd lms_project                                                                                                         (.venv) (base) aleksandr@MacBook-Pro-Aleksandr lms_project % 
