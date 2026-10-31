@@ -17,3 +17,17 @@ API для LMS-системы: пользователи, курсы, уроки.
 ```bash
 git clone https://github.com/aleksandrablonskij81-cmd/lms_project.git
 cd lms_project
+---
+
+## 🐳 Запуск через Docker
+
+### 1. Установить Docker Desktop
+
+- [Mac](https://docs.docker.com/desktop/install/mac-install/)
+- [Windows](https://docs.docker.com/desktop/install/windows-install/)
+- [Linux](https://docs.docker.com/desktop/install/linux-install/)
+
+### 2. Создать `.env` по примеру `.env.template`
+
+```bash
+cp .env.template .env
