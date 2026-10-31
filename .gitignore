@@ -43,3 +43,6 @@ local_settings.py
 # ===== OS =====
 .DS_Store
 Thumbs.db
+celerybeat-schedule
+celerybeat-schedule-shm
+celerybeat-schedule-wal
